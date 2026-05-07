@@ -5,7 +5,7 @@ import java.util.UUID;
 public record CodeExecutionRequest(
         String code,
         String language,
-        String Tests,
+        String tests,
         String correlationId,
         UUID packageId
 ) {}
