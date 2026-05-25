@@ -1,10 +1,9 @@
-FROM amazoncorretto:17
+FROM amazoncorretto:17-alpine
 
 WORKDIR /sandbox
 
-# Скрипт-запускатор: принимает имя класса, компилирует, выполняет с input
 RUN printf '%s\n' \
-    '#!/bin/bash' \
+    '#!/bin/sh' \
     'cd /sandbox' \
     'javac Main.java 2> compile_err.log' \
     'if [ $? -ne 0 ]; then' \
@@ -14,5 +13,4 @@ RUN printf '%s\n' \
     'java Main < input.txt' \
     > /run.sh && chmod +x /run.sh
 
-# Контейнер просто ждёт команды (не завершается)
 CMD ["tail", "-f", "/dev/null"]

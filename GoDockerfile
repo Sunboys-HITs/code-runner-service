@@ -1,0 +1,13 @@
+FROM golang:1.22-alpine
+
+WORKDIR /sandbox
+
+RUN printf '%s\n' \
+    '#!/bin/sh' \
+    'cd /sandbox' \
+    'go build -o main main.go' \
+    'if [ $? -ne 0 ]; then exit 1; fi' \
+    './main < input.txt' \
+    > /run.sh && chmod +x /run.sh
+
+CMD ["tail", "-f", "/dev/null"]

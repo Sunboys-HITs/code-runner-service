@@ -1,4 +1,4 @@
-package ru.mkenopsia.coderunnerservice.service.pool;
+package ru.mkenopsia.coderunnerservice.pool;
 
 public record ExecutionResult(String stdout, String stderr) {
 }

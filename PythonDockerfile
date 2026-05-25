@@ -1,0 +1,11 @@
+FROM python:3.11-alpine
+
+WORKDIR /sandbox
+
+RUN printf '%s\n' \
+    '#!/bin/sh' \
+    'cd /sandbox' \
+    'python3 -u main.py < input.txt' \
+    > /run.sh && chmod +x /run.sh
+
+CMD ["tail", "-f", "/dev/null"]

@@ -1,55 +1,77 @@
 package ru.mkenopsia.coderunnerservice.service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import ru.mkenopsia.coderunnerservice.dto.CodeExecutionRequest;
-import ru.mkenopsia.coderunnerservice.service.pool.ExecutionResult;
-import ru.mkenopsia.coderunnerservice.service.pool.JavaDockerContainerPool;
+import ru.mkenopsia.coderunnerservice.pool.DockerContainerPool;
+import ru.mkenopsia.coderunnerservice.pool.ExecutionResult;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class DockerCodeExecutionService implements CodeExecutionService {
 
-    private final JavaDockerContainerPool javaDockerContainerPool;
+    private final Map<String, DockerContainerPool> containers;
+
+    public DockerCodeExecutionService(ApplicationContext ctx) {
+        this.containers = new HashMap<>();
+        var beans = ctx.getBeansOfType(DockerContainerPool.class);
+        for(var beanName : beans.keySet()) {
+            this.containers.put(extractLanguageName(beanName), beans.get(beanName));
+        }
+    }
+
+    private String extractLanguageName(String beanName) {
+        return beanName.replace("DockerContainerPool", "").toLowerCase();
+    }
 
     @Override
     public void execute(CodeExecutionRequest request) {
-        if("java".equals(request.language())) {
+        if(containers.containsKey(request.language())) {
             try {
-                var res = executeJavaCode(request.code(), request.tests());
+                var res = executeCode(containers.get(request.language()), request.code(), request.tests());
                 log.info("Выполнен код с результатом: {}", res);
             } catch (Exception ex) {
                 log.error("Ошибка при запуске кода в контейнере", ex);
             }
+        } else {
+            log.warn("Не найден контейнер для запуска кода на языке {}", request.language());
         }
     }
 
-    public String executeJavaCode(String javaCode, String inputData) throws Exception {
-        String containerId = javaDockerContainerPool.borrowContainer();
+    private String executeCode(DockerContainerPool pool, String code, String inputData) throws Exception {
+        String containerId = pool.borrowContainer();
         try {
-            String escapedCode = javaCode.replace("'", "'\\''");
-            String createJavaCmd = "bash -c \"cat > /sandbox/Main.java\" <<< '" + escapedCode + "'";
-            javaDockerContainerPool.execCommand(containerId, createJavaCmd);
+            pool.writeFile(containerId, code, "/sandbox/" + pool.getSourceFileName());
 
-            String escapedInput = inputData.replace("'", "'\\''");
-            String createInputCmd = "bash -c \"cat > /sandbox/input.txt\" <<< '" + escapedInput + "'";
-            javaDockerContainerPool.execCommand(containerId, createInputCmd);
+            pool.writeFile(containerId, inputData, "/sandbox/input.txt");
 
-            ExecutionResult result = javaDockerContainerPool.execCommand(containerId, "/run.sh");
-
-            if (!result.stderr().isEmpty() && result.stdout().isEmpty()) {
-                return "COMPILATION ERROR:\n" + result.stderr();
-            }
-            return result.stdout();
+            ExecutionResult result = pool.execCommand(containerId, "/run.sh");
+            return classifyResult(result);
         } finally {
-            // Чистка
-            javaDockerContainerPool.execCommand(
-                    containerId,
-                    "rm -f /sandbox/Main.java /sandbox/Main.class /sandbox/input.txt"
-            );
-            javaDockerContainerPool.returnContainer(containerId);
+            pool.returnContainer(containerId);
         }
+    }
+
+    private String classifyResult(ExecutionResult result) {
+        String stderr = result.stderr();
+        String stdout = result.stdout();
+
+        if (stderr.contains("error:") ||
+                stderr.contains("cannot find symbol") ||
+                stderr.contains("expected") ||
+                stderr.contains("undefined reference") ||
+                stderr.contains("build FAILED")) {
+            return "COMPILATION ERROR:\n" + stderr;
+        }
+
+        if (!stderr.isEmpty() && stdout.isEmpty()) {
+            return "RUNTIME ERROR:\n" + stderr;
+        }
+
+        return stdout + (!stderr.isEmpty() ? "\n[WARN] " + stderr : "");
     }
 }

@@ -1,0 +1,14 @@
+FROM gcc:13
+
+WORKDIR /sandbox
+
+# ✅ Создаём /run.sh через printf — надёжно и переносимо
+RUN printf '%s\n' \
+    '#!/bin/sh' \
+    'cd /sandbox' \
+    'g++ -std=c++17 -O2 -Wall -Wextra -Werror -o Main main.cpp' \
+    'if [ $? -ne 0 ]; then exit 1; fi' \
+    './Main < input.txt' \
+    > /run.sh && chmod +x /run.sh
+
+CMD ["tail", "-f", "/dev/null"]
