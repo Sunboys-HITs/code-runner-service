@@ -13,6 +13,12 @@ public class RabbitConfig {
     private final RabbitCodeExecutionProps props;
 
     @Bean
+    public Queue codeExecutionQueue() {
+        return QueueBuilder.durable(props.getQueue())
+                .build();
+    }
+
+    @Bean
     public Queue successExecutionsQueue() {
         return QueueBuilder.durable(props.getSuccessQueueName()).build();
     }
@@ -41,5 +47,12 @@ public class RabbitConfig {
         return BindingBuilder.bind(queue)
                 .to(exchange)
                 .with(props.getFailedRoutingKey());
+    }
+
+    @Bean
+    public Binding codeExecutionQueueBinding(@Qualifier("codeExecutionQueue") Queue queue, DirectExchange exchange) {
+        return BindingBuilder.bind(queue)
+                .to(exchange)
+                .with(props.getQueueRoutingKey());
     }
 }

@@ -13,6 +13,7 @@ import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+import jakarta.annotation.PreDestroy;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -20,12 +21,15 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Getter
 public abstract class DockerContainerPool {
+
+    private final Set<String> allContainerIds = ConcurrentHashMap.newKeySet();
     private final DockerClient dockerClient;
     private final BlockingQueue<String> availableContainers;
     private final int poolSize;
@@ -95,6 +99,7 @@ public abstract class DockerContainerPool {
                     .exec();
             dockerClient.startContainerCmd(container.getId()).exec();
             availableContainers.add(container.getId());
+            allContainerIds.add(container.getId());
             log.info("Создан контейнер [{}]: {}", imageName, container.getId());
         }
     }
@@ -148,15 +153,36 @@ public abstract class DockerContainerPool {
         availableContainers.offer(containerId);
     }
 
-    public void close() throws IOException {
-        for (String id : availableContainers) {
+    @PreDestroy
+    public void close() {
+        if (availableContainers.isEmpty() && allContainerIds.isEmpty() && dockerClient != null) {
+            try {
+                dockerClient.close();
+            } catch (IOException e) {
+                log.warn("Failed to close Docker client", e);
+            }
+            return;
+        }
+
+        for (String id : allContainerIds) {
             try {
                 dockerClient.stopContainerCmd(id).withTimeout(5).exec();
+            } catch (Exception e) {
+                log.warn("Failed to stop container {}", id, e);
+            }
+            try {
                 dockerClient.removeContainerCmd(id).exec();
             } catch (Exception e) {
-                log.warn("Failed to cleanup container {}", id, e);
+                log.warn("Failed to remove container {}", id, e);
             }
         }
-        dockerClient.close();
+        availableContainers.clear();
+        allContainerIds.clear();
+
+        try {
+            dockerClient.close();
+        } catch (IOException e) {
+            log.warn("Failed to close Docker client", e);
+        }
     }
 }

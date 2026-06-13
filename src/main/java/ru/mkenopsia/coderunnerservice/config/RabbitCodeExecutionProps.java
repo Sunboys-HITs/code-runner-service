@@ -15,6 +15,10 @@ public class RabbitCodeExecutionProps {
 
     private String exchangeName;
 
+    private String queue;
+
+    private String queueRoutingKey;
+
     private String successRoutingKey;
 
     private String failedRoutingKey;

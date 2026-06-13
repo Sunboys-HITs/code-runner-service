@@ -19,7 +19,7 @@ public class DockerCodeExecutionService implements CodeExecutionService {
     public DockerCodeExecutionService(ApplicationContext ctx) {
         this.containers = new HashMap<>();
         var beans = ctx.getBeansOfType(DockerContainerPool.class);
-        for(var beanName : beans.keySet()) {
+        for (var beanName : beans.keySet()) {
             this.containers.put(extractLanguageName(beanName), beans.get(beanName));
         }
     }
@@ -30,23 +30,31 @@ public class DockerCodeExecutionService implements CodeExecutionService {
 
     @Override
     public void execute(CodeExecutionRequest request) {
-        if(containers.containsKey(request.language())) {
-            try {
-                var res = executeCode(containers.get(request.language()), request.code(), request.tests());
-                log.info("Выполнен код с результатом: {}", res);
-            } catch (Exception ex) {
-                log.error("Ошибка при запуске кода в контейнере", ex);
-            }
-        } else {
-            log.warn("Не найден контейнер для запуска кода на языке {}", request.language());
+        try {
+            var res = executeCode(request.code(), request.language(), "");
+            log.info("Выполнен код с результатом: {}", res);
+        } catch (Exception ex) {
+            log.error("Ошибка при запуске кода в контейнере", ex);
         }
     }
 
-    private String executeCode(DockerContainerPool pool, String code, String inputData) throws Exception {
+    @Override
+    public String executeCode(String code, String language, String inputData) {
+        var pool = containers.get(language);
+        if (pool == null) {
+            throw new IllegalArgumentException("Не найден пул для языка: " + language);
+        }
+        try {
+            return runInContainer(pool, code, inputData);
+        } catch (Exception e) {
+            throw new RuntimeException("Ошибка выполнения кода", e);
+        }
+    }
+
+    private String runInContainer(DockerContainerPool pool, String code, String inputData) throws Exception {
         String containerId = pool.borrowContainer();
         try {
             pool.writeFile(containerId, code, "/sandbox/" + pool.getSourceFileName());
-
             pool.writeFile(containerId, inputData, "/sandbox/input.txt");
 
             ExecutionResult result = pool.execCommand(containerId, "/run.sh");
@@ -56,7 +64,7 @@ public class DockerCodeExecutionService implements CodeExecutionService {
         }
     }
 
-    private String classifyResult(ExecutionResult result) {
+    public String classifyResult(ExecutionResult result) {
         String stderr = result.stderr();
         String stdout = result.stdout();
 
