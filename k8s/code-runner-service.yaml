@@ -23,6 +23,18 @@ spec:
             - name: http
               containerPort: 8080
           env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://main-postgres.infra.svc.cluster.local:5432/main_service
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: code-runner-main-database
+                  key: username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: code-runner-main-database
+                  key: password
             - name: SPRING_RABBITMQ_HOST
               value: rabbitmq.infra.svc.cluster.local
             - name: SPRING_RABBITMQ_PORT

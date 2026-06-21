@@ -12,6 +12,7 @@ env:
   DEPLOYMENT_NAME: code-runner-service
   NAMESPACE: app
   RABBITMQ_USERNAME: sunboys_app
+  MAIN_DB_USERNAME: main_service
 
 jobs:
   deploy:
@@ -68,6 +69,20 @@ jobs:
           kubectl -n "$NAMESPACE" create secret generic code-runner-rabbitmq \
             --from-literal=username="$RABBITMQ_USERNAME" \
             --from-literal=password="$RABBITMQ_PASSWORD" \
+            --dry-run=client \
+            -o yaml | kubectl apply -f -
+
+      - name: Configure main database connection
+        env:
+          MAIN_DB_PASSWORD: ${{ secrets.MAIN_DB_PASSWORD }}
+        run: |
+          test -n "$MAIN_DB_PASSWORD" || {
+            echo 'MAIN_DB_PASSWORD GitHub Actions secret is not configured' >&2
+            exit 1
+          }
+          kubectl -n "$NAMESPACE" create secret generic code-runner-main-database \
+            --from-literal=username="$MAIN_DB_USERNAME" \
+            --from-literal=password="$MAIN_DB_PASSWORD" \
             --dry-run=client \
             -o yaml | kubectl apply -f -
 
