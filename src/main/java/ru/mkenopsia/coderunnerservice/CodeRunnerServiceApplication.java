@@ -15,34 +15,34 @@ public class CodeRunnerServiceApplication {
 
     public static void main(String[] args) {
         ConfigurableApplicationContext context = SpringApplication.run(CodeRunnerServiceApplication.class, args);
-
-        var testService = context.getBean(TestService.class);
-        var consumer = context.getBean(CodeExecutionConsumer.class);
-
-        UUID taskId = UUID.fromString("6330bd53-522f-49f9-b718-aa814054f26f");
-
-        testService.add(taskId, "2", "4");
-        testService.add(taskId, "3", "6");
-        testService.add(taskId, "5", "10");
-        testService.add(taskId, "0", "0");
-
-        var codes = Map.of(
-                "java", "import java.util.*;\npublic class Main { public static void main(String[] a) { Scanner s=new Scanner(System.in); System.out.println(s.nextInt()*2); } }",
-                "python", "print(int(input()) * 2)",
-                "cpp", "#include <iostream>\nint main() { int x; std::cin >> x; std::cout << x*2; return 0; }",
-                "csharp", "using System; class Program { static void Main() { Console.WriteLine(int.Parse(Console.ReadLine()) * 2); } }",
-                "go", "package main\nimport \"fmt\"\nfunc main() { var x int; fmt.Scan(&x); fmt.Print(x*2) }"
-        );
-
-        for (var entry : codes.entrySet()) {
-            System.out.println("\n=== " + entry.getKey().toUpperCase() + " ===");
-
-            consumer.listen(new CodeExecutionRequest(
-                    entry.getValue(), entry.getKey(), taskId, UUID.randomUUID(), "demo-correlation-id"
-            ));
-
-            System.out.println();
-        }
+//
+//        var testService = context.getBean(TestService.class);
+//        var consumer = context.getBean(CodeExecutionConsumer.class);
+//
+//        UUID taskId = UUID.fromString("6330bd53-522f-49f9-b718-aa814054f26f");
+//
+//        testService.add(taskId, "2", "4");
+//        testService.add(taskId, "3", "6");
+//        testService.add(taskId, "5", "10");
+//        testService.add(taskId, "0", "0");
+//
+//        var codes = Map.of(
+//                "java", "import java.util.*;\npublic class Main { public static void main(String[] a) { Scanner s=new Scanner(System.in); System.out.println(s.nextInt()*2); } }",
+//                "python", "print(int(input()) * 2)",
+//                "cpp", "#include <iostream>\nint main() { int x; std::cin >> x; std::cout << x*2; return 0; }",
+//                "csharp", "using System; class Program { static void Main() { Console.WriteLine(int.Parse(Console.ReadLine()) * 2); } }",
+//                "go", "package main\nimport \"fmt\"\nfunc main() { var x int; fmt.Scan(&x); fmt.Print(x*2) }"
+//        );
+//
+//        for (var entry : codes.entrySet()) {
+//            System.out.println("\n=== " + entry.getKey().toUpperCase() + " ===");
+//
+//            consumer.listen(new CodeExecutionRequest(
+//                    entry.getValue(), entry.getKey(), taskId, UUID.randomUUID(), "demo-correlation-id"
+//            ));
+//
+//            System.out.println();
+//        }
     }
 
 }
