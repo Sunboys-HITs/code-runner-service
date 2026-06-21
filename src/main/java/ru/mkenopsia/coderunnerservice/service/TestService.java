@@ -7,6 +7,7 @@ import ru.mkenopsia.coderunnerservice.model.TestEntity;
 import ru.mkenopsia.coderunnerservice.storage.TestJpaRepository;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -15,7 +16,7 @@ public class TestService {
     private final TestJpaRepository repository;
 
     @Transactional
-    public TestEntity add(String taskId, String inputData, String expectedOutput) {
+    public TestEntity add(UUID taskId, String inputData, String expectedOutput) {
         return repository.save(TestEntity.builder()
                 .taskId(taskId)
                 .inputData(inputData)
@@ -24,7 +25,7 @@ public class TestService {
     }
 
     @Transactional(readOnly = true)
-    public List<TestEntity> findByTaskId(String taskId) {
+    public List<TestEntity> findByTaskId(UUID taskId) {
         return repository.findByTaskId(taskId);
     }
 }

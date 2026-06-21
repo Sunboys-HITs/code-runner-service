@@ -18,12 +18,8 @@ public class TestEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Builder.Default
-    @Column(name = "test_id", nullable = false, unique = true)
-    private UUID testId = UUID.randomUUID();
-
     @Column(name = "task_id", nullable = false)
-    private String taskId;
+    private UUID taskId;
 
     @Column(name = "input_data", nullable = false, length = 4096)
     private String inputData;

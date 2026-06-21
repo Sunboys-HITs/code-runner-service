@@ -5,9 +5,10 @@ import org.springframework.stereotype.Repository;
 import ru.mkenopsia.coderunnerservice.model.TestEntity;
 
 import java.util.List;
+import java.util.UUID;
 
 @Repository
 public interface TestJpaRepository extends JpaRepository<TestEntity, Long> {
 
-    List<TestEntity> findByTaskId(String taskId);
+    List<TestEntity> findByTaskId(UUID taskId);
 }

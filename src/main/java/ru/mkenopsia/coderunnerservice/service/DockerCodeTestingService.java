@@ -85,7 +85,7 @@ public class DockerCodeTestingService implements CodeTestingService {
             } else {
                 var entity = testEntities.get(i);
                 var reason = buildFailureReason(testResult);
-                failedTests.add(new FailedTest(entity.getTestId(), reason));
+                failedTests.add(new FailedTest(entity.getId(), reason));
             }
         }
 

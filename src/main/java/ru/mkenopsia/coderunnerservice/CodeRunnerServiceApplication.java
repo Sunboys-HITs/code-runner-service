@@ -19,7 +19,7 @@ public class CodeRunnerServiceApplication {
         var testService = context.getBean(TestService.class);
         var consumer = context.getBean(CodeExecutionConsumer.class);
 
-        String taskId = "task-multiply-by-2";
+        UUID taskId = UUID.fromString("6330bd53-522f-49f9-b718-aa814054f26f");
 
         testService.add(taskId, "2", "4");
         testService.add(taskId, "3", "6");
