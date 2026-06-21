@@ -10,9 +10,13 @@ import com.github.dockerjava.api.model.StreamType;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientBuilder;
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -34,6 +38,10 @@ public abstract class DockerContainerPool {
     private final BlockingQueue<String> availableContainers;
     private final int poolSize;
     private final String imageName;
+
+    private MeterRegistry meterRegistry;
+    private Timer borrowTimer;
+    private Timer execTimer;
 
     protected abstract String getDockerfileName();
 
@@ -62,6 +70,39 @@ public abstract class DockerContainerPool {
                 .build();
 
         initPool();
+    }
+
+    @Autowired
+    public void setMeterRegistry(MeterRegistry meterRegistry) {
+        this.meterRegistry = meterRegistry;
+    }
+
+    @PostConstruct
+    private void registerMetrics() {
+        if (meterRegistry == null) return;
+        String lang = getLanguageTag();
+
+        io.micrometer.core.instrument.Gauge.builder("pool.containers.available", availableContainers, BlockingQueue::size)
+                .tag("language", lang)
+                .register(meterRegistry);
+
+        io.micrometer.core.instrument.Gauge.builder("pool.containers.total", allContainerIds, Set::size)
+                .tag("language", lang)
+                .register(meterRegistry);
+
+        borrowTimer = Timer.builder("pool.container.borrow.time")
+                .tag("language", lang)
+                .register(meterRegistry);
+
+        execTimer = Timer.builder("pool.container.exec.time")
+                .tag("language", lang)
+                .register(meterRegistry);
+    }
+
+    private String getLanguageTag() {
+        return this.getClass().getSimpleName()
+                .replace("DockerContainerPool", "")
+                .toLowerCase();
     }
 
     private void initPool() {
@@ -105,6 +146,7 @@ public abstract class DockerContainerPool {
     }
 
     public ExecutionResult execCommand(String containerId, String command) throws Exception {
+        Timer.Sample sample = borrowTimer != null ? Timer.start(meterRegistry) : null;
         var execCreateCmdResponse = dockerClient.execCreateCmd(containerId)
                 .withCmd("sh", "-c", command)
                 .withAttachStdout(true)
@@ -132,7 +174,9 @@ public abstract class DockerContainerPool {
                 })
                 .awaitCompletion(30, TimeUnit.SECONDS);
 
-        return new ExecutionResult(stdout.toString(), stderr.toString());
+        var result = new ExecutionResult(stdout.toString(), stderr.toString());
+        if (sample != null) sample.stop(execTimer);
+        return result;
     }
 
     public void writeFile(String containerId, String content, String filePath) throws Exception {
@@ -142,10 +186,14 @@ public abstract class DockerContainerPool {
     }
 
     public String borrowContainer() throws InterruptedException {
+        Timer.Sample sample = borrowTimer != null ? Timer.start(meterRegistry) : null;
         String containerId = availableContainers.poll(30, TimeUnit.SECONDS);
         if (containerId == null) {
+            if (borrowTimer != null) meterRegistry.counter("pool.container.borrow.failures",
+                    "language", getLanguageTag()).increment();
             throw new RuntimeException("Нет свободных контейнеров в пуле");
         }
+        if (sample != null) sample.stop(borrowTimer);
         return containerId;
     }
 

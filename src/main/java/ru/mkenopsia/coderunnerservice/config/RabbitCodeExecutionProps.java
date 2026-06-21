@@ -9,17 +9,13 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "rabbitmq.code-execution")
 public class RabbitCodeExecutionProps {
 
-    private String successQueueName;
+    private String requestQueueName;
 
-    private String failedQueueName;
+    private String resultQueueName;
 
     private String exchangeName;
 
-    private String queue;
+    private String requestRoutingKey;
 
-    private String queueRoutingKey;
-
-    private String successRoutingKey;
-
-    private String failedRoutingKey;
+    private String resultRoutingKey;
 }

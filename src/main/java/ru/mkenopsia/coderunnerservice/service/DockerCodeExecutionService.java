@@ -1,5 +1,7 @@
 package ru.mkenopsia.coderunnerservice.service;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
@@ -15,9 +17,11 @@ import java.util.Map;
 public class DockerCodeExecutionService implements CodeExecutionService {
 
     private final Map<String, DockerContainerPool> containers;
+    private final MeterRegistry meterRegistry;
 
-    public DockerCodeExecutionService(ApplicationContext ctx) {
+    public DockerCodeExecutionService(ApplicationContext ctx, MeterRegistry meterRegistry) {
         this.containers = new HashMap<>();
+        this.meterRegistry = meterRegistry;
         var beans = ctx.getBeansOfType(DockerContainerPool.class);
         for (var beanName : beans.keySet()) {
             this.containers.put(extractLanguageName(beanName), beans.get(beanName));
@@ -44,10 +48,16 @@ public class DockerCodeExecutionService implements CodeExecutionService {
         if (pool == null) {
             throw new IllegalArgumentException("Не найден пул для языка: " + language);
         }
+
+        meterRegistry.counter("executions.by.language", "language", language).increment();
+
+        Timer.Sample sample = Timer.start(meterRegistry);
         try {
             return runInContainer(pool, code, inputData);
         } catch (Exception e) {
             throw new RuntimeException("Ошибка выполнения кода", e);
+        } finally {
+            sample.stop(meterRegistry.timer("executions.duration", "language", language));
         }
     }
 

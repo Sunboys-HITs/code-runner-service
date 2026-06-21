@@ -1,5 +1,6 @@
 package ru.mkenopsia.coderunnerservice.service;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class DockerCodeTestingService implements CodeTestingService {
 
     private final CodeExecutionService codeExecutionService;
     private final TestService testService;
+    private final MeterRegistry meterRegistry;
 
     @Override
     public List<TestResult> runTests(TestRunRequest request) {
@@ -86,6 +88,10 @@ public class DockerCodeTestingService implements CodeTestingService {
                 failedTests.add(new FailedTest(entity.getTestId(), reason));
             }
         }
+
+        var lang = request.language();
+        meterRegistry.counter("tests.passed", "language", lang).increment(passed);
+        meterRegistry.counter("tests.failed", "language", lang).increment(failedTests.size());
 
         return CodeExecutionResult.builder()
                 .passedTests(passed)
