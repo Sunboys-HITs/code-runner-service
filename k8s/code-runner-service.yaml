@@ -6,7 +6,6 @@ metadata:
   labels:
     app.kubernetes.io/name: code-runner-service
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: code-runner-service
@@ -15,6 +14,21 @@ spec:
       labels:
         app.kubernetes.io/name: code-runner-service
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: DoesNotExist
+                  - key: node-role.kubernetes.io/master
+                    operator: DoesNotExist
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: code-runner-service
+              topologyKey: kubernetes.io/hostname
       containers:
         - name: code-runner-service
           image: IMAGE_PLACEHOLDER
@@ -83,3 +97,41 @@ spec:
     - name: http
       port: 80
       targetPort: http
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: code-runner-rabbitmq
+  namespace: app
+spec:
+  secretTargetRef:
+    - parameter: username
+      name: code-runner-rabbitmq
+      key: username
+    - parameter: password
+      name: code-runner-rabbitmq
+      key: password
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: code-runner-service
+  namespace: app
+spec:
+  scaleTargetRef:
+    name: code-runner-service
+  pollingInterval: 15
+  cooldownPeriod: 300
+  minReplicaCount: 1
+  maxReplicaCount: 3
+  triggers:
+    - type: rabbitmq
+      metadata:
+        protocol: amqp
+        host: amqp://rabbitmq.infra.svc.cluster.local:5672
+        vhostName: /
+        queueName: code-execution-requests
+        mode: QueueLength
+        value: "5"
+      authenticationRef:
+        name: code-runner-rabbitmq
