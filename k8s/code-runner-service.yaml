@@ -15,6 +15,21 @@ spec:
       labels:
         app.kubernetes.io/name: code-runner-service
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: DoesNotExist
+                  - key: node-role.kubernetes.io/master
+                    operator: DoesNotExist
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: code-runner-service
+              topologyKey: kubernetes.io/hostname
       containers:
         - name: code-runner-service
           image: IMAGE_PLACEHOLDER
