@@ -15,7 +15,7 @@ import java.util.UUID;
 public class TestEntity {
 
     @Id
-    @Column(name = "Id")
+    @Column(name = "\"Id\"")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
