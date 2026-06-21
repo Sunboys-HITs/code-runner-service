@@ -68,3 +68,18 @@ spec:
           hostPath:
             path: /var/run/docker.sock
             type: Socket
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: code-runner-service
+  namespace: app
+  labels:
+    app.kubernetes.io/name: code-runner-service
+spec:
+  selector:
+    app.kubernetes.io/name: code-runner-service
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
