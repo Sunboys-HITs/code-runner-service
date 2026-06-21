@@ -4,6 +4,7 @@ import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.command.BuildImageResultCallback;
 import com.github.dockerjava.api.command.CreateContainerResponse;
+import com.github.dockerjava.api.model.Capability;
 import com.github.dockerjava.api.model.Frame;
 import com.github.dockerjava.api.model.HostConfig;
 import com.github.dockerjava.api.model.StreamType;
@@ -23,6 +24,7 @@ import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -133,7 +135,12 @@ public abstract class DockerContainerPool {
                             .withMemory(512 * 1024 * 1024L)
                             .withCpuCount(1L)
                             .withNetworkMode("none")
-                            .withAutoRemove(false))
+                            .withAutoRemove(false)
+                            .withReadonlyRootfs(true)
+                            .withTmpFs(Map.of("/sandbox", "size=64M"))
+                            .withCapDrop(Capability.ALL)
+                            .withSecurityOpts(List.of("no-new-privileges:true"))
+                            .withPidsLimit(100L))
                     .withAttachStdout(true)
                     .withAttachStderr(true)
                     .withTty(false)
