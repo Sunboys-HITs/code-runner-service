@@ -179,6 +179,8 @@ public abstract class DockerContainerPool {
         availableContainers.clear();
         allContainerIds.clear();
 
+        log.info("Docker контейнер {} остановлен", this.getClass().getName());
+
         try {
             dockerClient.close();
         } catch (IOException e) {

@@ -6,5 +6,6 @@ public record CodeExecutionRequest(
         String code,
         String language,
         String taskId,
-        UUID packageId
+        UUID packageId,
+        String correlationId
 ) {}

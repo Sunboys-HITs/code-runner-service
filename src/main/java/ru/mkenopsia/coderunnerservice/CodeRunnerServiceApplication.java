@@ -38,7 +38,7 @@ public class CodeRunnerServiceApplication {
             System.out.println("\n=== " + entry.getKey().toUpperCase() + " ===");
 
             consumer.listen(new CodeExecutionRequest(
-                    entry.getValue(), entry.getKey(), taskId, UUID.randomUUID()
+                    entry.getValue(), entry.getKey(), taskId, UUID.randomUUID(), "demo-correlation-id"
             ));
 
             System.out.println();
